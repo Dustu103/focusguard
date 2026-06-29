@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-merged_res-67:\\xml_device_admin.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-main-68:\\xml\\device_admin.xml"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-merged_res-67:\\xml_accessibility_service_config.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-main-68:\\xml\\accessibility_service_config.xml"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-merged_res-67:\\drawable_ic_launcher.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.5\\com.focusguard.app-main-68:\\drawable\\ic_launcher.xml"
+    },
+    {
+        "merged": "com.focusguard.app-merged_res-67:/xml_device_admin.xml.flat",
+        "source": "com.focusguard.app-main-68:/xml/device_admin.xml"
+    }
+]

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">FocusGuard uses Accessibility Services to detect when your child tries to open a blocked application and prevents them from accessing it.</string>
+    <string name="app_name">FocusGuard</string>
+</resources>
