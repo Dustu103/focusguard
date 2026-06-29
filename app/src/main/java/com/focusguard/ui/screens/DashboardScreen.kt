@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -157,7 +158,7 @@ fun DashboardScreen(
                                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
                                         .size(40.dp)
                                 ) {
-                                    Icon(androidx.compose.material.icons.automirrored.filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(

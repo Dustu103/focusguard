@@ -36,12 +36,13 @@ class FocusVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopVpn()
+            stopSelf()
             return START_NOT_STICKY
         }
         
         loadBlockedDomains()
         
-        if (!isRunning) {
+        if (!isRunning && blockedDomains.isNotEmpty()) {
             startVpn()
         }
         return START_STICKY
@@ -61,6 +62,17 @@ class FocusVpnService : VpnService() {
                 domains
             }.collect { combinedDomains ->
                 blockedDomains = combinedDomains
+                if (combinedDomains.isEmpty() && isRunning) {
+                    isRunning = false
+                    try {
+                        vpnInterface?.close()
+                    } catch (e: Exception) {
+                        Log.e("VPN", "Error closing vpn interface", e)
+                    }
+                    vpnInterface = null
+                } else if (combinedDomains.isNotEmpty() && !isRunning) {
+                    startVpn()
+                }
             }
         }
     }
@@ -70,7 +82,7 @@ class FocusVpnService : VpnService() {
             .setSession("FocusGuard")
             .addAddress("10.0.0.2", 32)
             .addDnsServer("10.0.0.1")
-            .addRoute("0.0.0.0", 0)
+            .addRoute("10.0.0.1", 32)
             .setBlocking(false)
 
         vpnInterface = builder.establish()
@@ -175,9 +187,12 @@ class FocusVpnService : VpnService() {
 
     private fun stopVpn() {
         isRunning = false
-        vpnInterface?.close()
+        try {
+            vpnInterface?.close()
+        } catch (e: Exception) {
+            Log.e("VPN", "Error closing vpn interface", e)
+        }
         vpnInterface = null
-        stopSelf()
     }
 
     override fun onRevoke() {
