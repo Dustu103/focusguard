@@ -34,18 +34,22 @@ public final class AppDatabase_Impl extends AppDatabase {
 
   private volatile UsageLimitDao _usageLimitDao;
 
+  private volatile BlockProfileDao _blockProfileDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(3) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(4) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `blocked_apps` (`packageName` TEXT NOT NULL, `appName` TEXT NOT NULL, `appIcon` BLOB, `isBlocked` INTEGER NOT NULL, `blockedUntil` INTEGER NOT NULL, `useSchedule` INTEGER NOT NULL, PRIMARY KEY(`packageName`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `schedules` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `scheduleType` TEXT NOT NULL, `packageName` TEXT NOT NULL, `targetLabel` TEXT NOT NULL, `targetUrl` TEXT NOT NULL, `startHour` INTEGER NOT NULL, `startMinute` INTEGER NOT NULL, `endHour` INTEGER NOT NULL, `endMinute` INTEGER NOT NULL, `daysOfWeek` TEXT NOT NULL, `isActive` INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS `blocked_domains` (`domain` TEXT NOT NULL, PRIMARY KEY(`domain`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `usage_limits` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `target` TEXT NOT NULL, `targetType` TEXT NOT NULL, `limitMinutes` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `block_profiles` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `isActive` INTEGER NOT NULL, `activeUntil` INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `block_profile_apps` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `profileId` INTEGER NOT NULL, `packageName` TEXT NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '288126e30d1c685e9a608f33aa47f916')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c166301acec80d06606b46b8d9a10684')");
       }
 
       @Override
@@ -54,6 +58,8 @@ public final class AppDatabase_Impl extends AppDatabase {
         db.execSQL("DROP TABLE IF EXISTS `schedules`");
         db.execSQL("DROP TABLE IF EXISTS `blocked_domains`");
         db.execSQL("DROP TABLE IF EXISTS `usage_limits`");
+        db.execSQL("DROP TABLE IF EXISTS `block_profiles`");
+        db.execSQL("DROP TABLE IF EXISTS `block_profile_apps`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -159,9 +165,36 @@ public final class AppDatabase_Impl extends AppDatabase {
                   + " Expected:\n" + _infoUsageLimits + "\n"
                   + " Found:\n" + _existingUsageLimits);
         }
+        final HashMap<String, TableInfo.Column> _columnsBlockProfiles = new HashMap<String, TableInfo.Column>(4);
+        _columnsBlockProfiles.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBlockProfiles.put("name", new TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBlockProfiles.put("isActive", new TableInfo.Column("isActive", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBlockProfiles.put("activeUntil", new TableInfo.Column("activeUntil", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysBlockProfiles = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesBlockProfiles = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoBlockProfiles = new TableInfo("block_profiles", _columnsBlockProfiles, _foreignKeysBlockProfiles, _indicesBlockProfiles);
+        final TableInfo _existingBlockProfiles = TableInfo.read(db, "block_profiles");
+        if (!_infoBlockProfiles.equals(_existingBlockProfiles)) {
+          return new RoomOpenHelper.ValidationResult(false, "block_profiles(com.focusguard.data.BlockProfile).\n"
+                  + " Expected:\n" + _infoBlockProfiles + "\n"
+                  + " Found:\n" + _existingBlockProfiles);
+        }
+        final HashMap<String, TableInfo.Column> _columnsBlockProfileApps = new HashMap<String, TableInfo.Column>(3);
+        _columnsBlockProfileApps.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBlockProfileApps.put("profileId", new TableInfo.Column("profileId", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBlockProfileApps.put("packageName", new TableInfo.Column("packageName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysBlockProfileApps = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesBlockProfileApps = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoBlockProfileApps = new TableInfo("block_profile_apps", _columnsBlockProfileApps, _foreignKeysBlockProfileApps, _indicesBlockProfileApps);
+        final TableInfo _existingBlockProfileApps = TableInfo.read(db, "block_profile_apps");
+        if (!_infoBlockProfileApps.equals(_existingBlockProfileApps)) {
+          return new RoomOpenHelper.ValidationResult(false, "block_profile_apps(com.focusguard.data.BlockProfileApp).\n"
+                  + " Expected:\n" + _infoBlockProfileApps + "\n"
+                  + " Found:\n" + _existingBlockProfileApps);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "288126e30d1c685e9a608f33aa47f916", "07c0be6b1b7837ac1d6943eca3069130");
+    }, "c166301acec80d06606b46b8d9a10684", "2d082f5a429f9340d2983821f71914f7");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -172,7 +205,7 @@ public final class AppDatabase_Impl extends AppDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "blocked_apps","schedules","blocked_domains","usage_limits");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "blocked_apps","schedules","blocked_domains","usage_limits","block_profiles","block_profile_apps");
   }
 
   @Override
@@ -185,6 +218,8 @@ public final class AppDatabase_Impl extends AppDatabase {
       _db.execSQL("DELETE FROM `schedules`");
       _db.execSQL("DELETE FROM `blocked_domains`");
       _db.execSQL("DELETE FROM `usage_limits`");
+      _db.execSQL("DELETE FROM `block_profiles`");
+      _db.execSQL("DELETE FROM `block_profile_apps`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -203,6 +238,7 @@ public final class AppDatabase_Impl extends AppDatabase {
     _typeConvertersMap.put(ScheduleDao.class, ScheduleDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(BlockedDomainDao.class, BlockedDomainDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(UsageLimitDao.class, UsageLimitDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(BlockProfileDao.class, BlockProfileDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -273,6 +309,20 @@ public final class AppDatabase_Impl extends AppDatabase {
           _usageLimitDao = new UsageLimitDao_Impl(this);
         }
         return _usageLimitDao;
+      }
+    }
+  }
+
+  @Override
+  public BlockProfileDao blockProfileDao() {
+    if (_blockProfileDao != null) {
+      return _blockProfileDao;
+    } else {
+      synchronized(this) {
+        if(_blockProfileDao == null) {
+          _blockProfileDao = new BlockProfileDao_Impl(this);
+        }
+        return _blockProfileDao;
       }
     }
   }

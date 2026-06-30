@@ -1,10 +1,14 @@
 package com.focusguard.ui.screens
 
+import android.content.Context
+import com.focusguard.data.BlockProfile
+import kotlinx.coroutines.Dispatchers
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,7 +28,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.Image
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.material.icons.filled.Apps
 import com.focusguard.data.BlockedApp
 import com.focusguard.data.AppDatabase
@@ -44,7 +52,8 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit,
     onCustomDomains: () -> Unit,
     onDailyLimits: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onManageProfiles: () -> Unit
 ) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
@@ -52,11 +61,18 @@ fun DashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     val allBlockedApps by db.blockedAppDao().getBlockedApps().collectAsState(initial = emptyList())
+    val allActiveProfiles by db.blockProfileDao().getActiveProfiles().collectAsState(initial = emptyList())
+    
     val now = System.currentTimeMillis()
     val blockedApps = allBlockedApps.filter {
         it.isBlocked && (it.blockedUntil == 0L || it.blockedUntil > now)
     }
-    val isBlockActive = blockedApps.isNotEmpty()
+    val activeProfiles = allActiveProfiles.filter {
+        it.isActive && (it.activeUntil == 0L || it.activeUntil > now)
+    }
+    
+    val totalRestrictions = blockedApps.size + activeProfiles.size
+    val isBlockActive = totalRestrictions > 0
 
     // Permission states — re-checked every time screen is shown
     var accessibilityEnabled by remember { mutableStateOf(false) }
@@ -194,7 +210,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                                 Text(
-                                    text = if (isBlockActive) "${blockedApps.size} apps are currently restricted" else "No active restrictions",
+                                    text = if (isBlockActive) "$totalRestrictions active restrictions" else "No active restrictions",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                                 )
@@ -203,6 +219,7 @@ fun DashboardScreen(
                     }
                 }
             }
+
 
             // ── Permission Banners (Wrapped in padding) ───────────────────────
             if (!accessibilityEnabled || !deviceAdminActive || !usageStatsGranted || vpnIntent != null) {
@@ -337,14 +354,14 @@ fun DashboardScreen(
                             icon = Icons.Default.Lock,
                             onClick = onSelectApps,
                             modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = androidx.compose.ui.graphics.Color(0xFFE91E63) // Vibrant Pink
                         )
                         ActionCard(
-                            title = "Websites",
-                            icon = Icons.Default.Info, // Placeholder for globe
-                            onClick = onCustomDomains,
+                            title = "Quick Lists",
+                            icon = Icons.Default.Apps,
+                            onClick = onManageProfiles,
                             modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.secondary
+                            containerColor = androidx.compose.ui.graphics.Color(0xFF9C27B0) // Vibrant Purple
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -353,35 +370,55 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         ActionCard(
-                            title = "Schedules",
-                            icon = Icons.Default.Add, // Placeholder for clock
-                            onClick = onViewSchedules,
+                            title = "Websites\n(Coming Soon)",
+                            icon = Icons.Default.Info, // Placeholder for globe
+                            onClick = { },
                             modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.tertiary
+                            containerColor = androidx.compose.ui.graphics.Color(0xFF2196F3) // Vibrant Blue
                         )
                         ActionCard(
-                            title = "Daily Limits",
-                            icon = Icons.Default.Warning, // Placeholder for timer
-                            onClick = onDailyLimits,
+                            title = "Schedules\n(Coming Soon)",
+                            icon = Icons.Default.Add, // Placeholder for clock
+                            onClick = { },
                             modifier = Modifier.weight(1f),
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = androidx.compose.ui.graphics.Color(0xFF4CAF50) // Vibrant Green
                         )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ActionCard(
+                            title = "Daily Limits\n(Coming Soon)",
+                            icon = Icons.Default.Warning, // Placeholder for timer
+                            onClick = { },
+                            modifier = Modifier.weight(0.5f), // Takes up half the screen for balance
+                            containerColor = androidx.compose.ui.graphics.Color(0xFFFF9800) // Vibrant Orange
+                        )
+                        Spacer(modifier = Modifier.weight(0.5f))
                     }
                 }
             }
-            // ── Blocked apps list ─────────────────────────────────────────────
-            if (blockedApps.isNotEmpty()) {
+            // ── Active Restrictions ─────────────────────────────────────────────
+            if (totalRestrictions > 0) {
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Active Restrictions (${blockedApps.size})",
+                        "Active Restrictions ($totalRestrictions)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )
                 }
+                
+                // Active Profiles
+                items(activeProfiles) { profile ->
+                    ActiveProfileRow(profile = profile)
+                }
+                
+                // Individually blocked apps
                 items(blockedApps) { app ->
                     BlockedAppRow(
                         app = app,
@@ -410,27 +447,29 @@ fun ActionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.height(100.dp),
+        modifier = modifier.height(90.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.Start
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(26.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = contentColor
+                color = contentColor,
+                lineHeight = 16.sp
             )
         }
     }
@@ -513,13 +552,22 @@ fun BlockedAppRow(app: BlockedApp, onRequestUnblock: () -> Unit) {
             bitmap.asImageBitmap()
         } catch (e: Exception) { null }
     }
-    val now = System.currentTimeMillis()
+    
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(app.blockedUntil) {
+        if (app.blockedUntil > 0L) {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                now = System.currentTimeMillis()
+            }
+        }
+    }
     val timeLeft = if (app.blockedUntil > 0L) {
         val ms = app.blockedUntil - now
         when {
             ms <= 0 -> null
             ms < 60_000 -> "${ms / 1000}s left"
-            ms < 3_600_000 -> "${ms / 60_000}m left"
+            ms < 3_600_000 -> "${ms / 60_000}m ${(ms % 60_000) / 1000}s left"
             else -> {
                 val h = ms / 3_600_000
                 val m = (ms % 3_600_000) / 60_000
@@ -562,6 +610,101 @@ fun BlockedAppRow(app: BlockedApp, onRequestUnblock: () -> Unit) {
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error
                 )
+            }
+        }
+    }
+}
+
+// ─── Active Profile row ───────────────────────────────────────────────────────
+@Composable
+fun ActiveProfileRow(profile: com.focusguard.data.BlockProfile) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getInstance(context) }
+    val apps by db.blockProfileDao().getAppsForProfile(profile.id).collectAsState(initial = emptyList())
+    val pm = context.packageManager
+    
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(profile.activeUntil) {
+        if (profile.activeUntil > 0L) {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                now = System.currentTimeMillis()
+            }
+        }
+    }
+    val timeLeft = if (profile.activeUntil > 0L) {
+        val ms = profile.activeUntil - now
+        when {
+            ms <= 0 -> null
+            ms < 60_000 -> "${ms / 1000}s left"
+            ms < 3_600_000 -> "${ms / 60_000}m ${(ms % 60_000) / 1000}s left"
+            else -> {
+                val h = ms / 3_600_000
+                val m = (ms % 3_600_000) / 60_000
+                if (m > 0) "${h}h ${m}m left" else "${h}h left"
+            }
+        }
+    } else null
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Apps, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        profile.name.ifBlank { "Unnamed List" },
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        if (timeLeft != null) "🕒 Active · $timeLeft" else "🔒 Active",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            
+            if (apps.isNotEmpty()) {
+                val uniqueApps = apps.distinctBy { it.packageName }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    uniqueApps.take(6).forEach { app ->
+                        val icon = remember(app.packageName) {
+                            try { pm.getApplicationIcon(app.packageName) } catch(e: Exception) { null }
+                        }
+                        if (icon != null) {
+                            Image(
+                                bitmap = icon.toBitmap(96, 96).asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        } else {
+                            Box(modifier = Modifier.size(28.dp).background(MaterialTheme.colorScheme.primary.copy(alpha=0.2f), shape = CircleShape))
+                        }
+                    }
+                    if (uniqueApps.size > 6) {
+                        Box(
+                            modifier = Modifier.size(28.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.2f), shape = CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("+${uniqueApps.size - 6}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
         }
     }

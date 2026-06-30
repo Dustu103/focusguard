@@ -22,10 +22,10 @@ class AppBlockerService : Service() {
 
     private lateinit var usageStatsManager: UsageStatsManager
     private lateinit var db: AppDatabase
-    private var blockedPackages = setOf<String>()
-    private var baseBlockedPackages = setOf<String>()
-    private var profileBlockedPackages = setOf<String>()
-    private var limitPackages = mapOf<String, Int>()
+    @Volatile private var blockedPackages = setOf<String>()
+    @Volatile private var baseBlockedPackages = setOf<String>()
+    @Volatile private var profileBlockedPackages = setOf<String>()
+    @Volatile private var limitPackages = mapOf<String, Int>()
     private val handler = Handler(Looper.getMainLooper())
 
     // Poll every 500 ms — fast enough to block immediately, light enough on battery
@@ -48,17 +48,19 @@ class AppBlockerService : Service() {
      * so the UI reflects the real state and the block is actually lifted.
      */
     private fun observeBlockedApps() {
+        // Run a periodic check to expire timers directly in the database
+        serviceScope.launch {
+            while (true) {
+                val now = System.currentTimeMillis()
+                db.blockedAppDao().autoExpireApps(now)
+                db.blockProfileDao().autoExpireProfiles(now)
+                kotlinx.coroutines.delay(2000L) // Poll every 2 seconds for expirations
+            }
+        }
+
         serviceScope.launch {
             db.blockedAppDao().getBlockedApps().collect { apps ->
                 val now = System.currentTimeMillis()
-
-                // Auto-expire any timed blocks whose timer has run out
-                apps.filter { it.blockedUntil > 0L && it.blockedUntil <= now }
-                    .forEach { expired ->
-                        db.blockedAppDao().insertOrUpdate(
-                            expired.copy(isBlocked = false, blockedUntil = 0L)
-                        )
-                    }
 
                 val baseBlocked = apps
                     .filter { it.isBlocked }
@@ -78,12 +80,8 @@ class AppBlockerService : Service() {
         }
         serviceScope.launch {
             db.blockProfileDao().getActiveProfiles().collect { activeProfiles ->
-                val now = System.currentTimeMillis()
-                
-                // Expire timed profiles
-                activeProfiles.filter { it.activeUntil in 1..now }.forEach { expired ->
-                    db.blockProfileDao().updateProfileStatus(expired.id, false, 0L)
-                }
+                // Flow collected just to keep activeProfiles tracking if we needed it here, 
+                // but expiration is now handled natively by the DB timer loop above.
             }
         }
         serviceScope.launch {

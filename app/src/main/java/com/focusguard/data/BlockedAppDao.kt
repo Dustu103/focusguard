@@ -31,4 +31,7 @@ interface BlockedAppDao {
     
     @Query("UPDATE blocked_apps SET isBlocked = :blocked WHERE useSchedule = 1")
     suspend fun setAllScheduledBlocked(blocked: Boolean)
+    
+    @Query("UPDATE blocked_apps SET isBlocked = 0, blockedUntil = 0 WHERE isBlocked = 1 AND blockedUntil > 0 AND blockedUntil <= :currentTime")
+    suspend fun autoExpireApps(currentTime: Long)
 }

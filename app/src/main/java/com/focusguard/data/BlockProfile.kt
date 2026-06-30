@@ -60,6 +60,10 @@ interface BlockProfileDao {
     
     @Query("UPDATE block_profiles SET isActive = :isActive, activeUntil = :activeUntil WHERE id = :profileId")
     suspend fun updateProfileStatus(profileId: Int, isActive: Boolean, activeUntil: Long)
-    @Query("SELECT DISTINCT p.packageName FROM block_profile_apps p INNER JOIN block_profiles b ON p.profileId = b.id WHERE b.isActive = 1")
-    fun getPackagesForActiveProfiles(): Flow<List<String>>
+    
+    @Query("UPDATE block_profiles SET isActive = 0, activeUntil = 0 WHERE isActive = 1 AND activeUntil > 0 AND activeUntil <= :currentTime")
+    suspend fun autoExpireProfiles(currentTime: Long)
+    
+    @Query("SELECT DISTINCT p.packageName FROM block_profile_apps p INNER JOIN block_profiles b ON p.profileId = b.id WHERE b.isActive = :isActive")
+    fun getPackagesForActiveProfiles(isActive: Boolean = true): Flow<List<String>>
 }

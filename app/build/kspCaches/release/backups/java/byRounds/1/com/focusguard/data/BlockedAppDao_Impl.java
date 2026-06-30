@@ -41,6 +41,8 @@ public final class BlockedAppDao_Impl implements BlockedAppDao {
 
   private final SharedSQLiteStatement __preparedStmtOfSetAllScheduledBlocked;
 
+  private final SharedSQLiteStatement __preparedStmtOfAutoExpireApps;
+
   public BlockedAppDao_Impl(@NonNull final RoomDatabase __db) {
     this.__db = __db;
     this.__insertionAdapterOfBlockedApp = new EntityInsertionAdapter<BlockedApp>(__db) {
@@ -96,6 +98,14 @@ public final class BlockedAppDao_Impl implements BlockedAppDao {
       @NonNull
       public String createQuery() {
         final String _query = "UPDATE blocked_apps SET isBlocked = ? WHERE useSchedule = 1";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfAutoExpireApps = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "UPDATE blocked_apps SET isBlocked = 0, blockedUntil = 0 WHERE isBlocked = 1 AND blockedUntil > 0 AND blockedUntil <= ?";
         return _query;
       }
     };
@@ -223,6 +233,32 @@ public final class BlockedAppDao_Impl implements BlockedAppDao {
           }
         } finally {
           __preparedStmtOfSetAllScheduledBlocked.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object autoExpireApps(final long currentTime,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfAutoExpireApps.acquire();
+        int _argIndex = 1;
+        _stmt.bindLong(_argIndex, currentTime);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfAutoExpireApps.release(_stmt);
         }
       }
     }, $completion);

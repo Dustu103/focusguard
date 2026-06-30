@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -43,8 +44,10 @@ class MainActivity : ComponentActivity() {
                                 val allPermsGranted = u && a && d
 
                                 val destination = when {
-                                    !hasSeenOnboarding && !allPermsGranted -> "onboarding"
-                                    else -> "mode_select"
+                                    !hasSeenOnboarding || !allPermsGranted -> "onboarding"
+                                    !pinManager.isPinSet() -> "setup_pin"
+                                    !hasModeSelected -> "mode_select"
+                                    else -> "dashboard"
                                 }
                                 navController.navigate(destination) {
                                     popUpTo("splash") { inclusive = true }
@@ -62,8 +65,7 @@ class MainActivity : ComponentActivity() {
                                         .putString("app_mode", "focus")
                                         .apply()
                                     
-                                    val dest = if (pinManager.isPinSet()) "dashboard" else "setup_pin"
-                                    navController.navigate(dest)
+                                    navController.navigate("dashboard")
                                 },
                                 onParentalModeSelected = {
                                     val prefs = getSharedPreferences("FocusGuardPrefs", Context.MODE_PRIVATE)
@@ -72,8 +74,7 @@ class MainActivity : ComponentActivity() {
                                         .putString("app_mode", "parental")
                                         .apply()
                                     
-                                    val dest = if (pinManager.isPinSet()) "dashboard" else "setup_pin"
-                                    navController.navigate(dest)
+                                    navController.navigate("dashboard")
                                 }
                             )
                         }
@@ -84,7 +85,7 @@ class MainActivity : ComponentActivity() {
 
                         composable("onboarding") {
                             OnboardingScreen(onFinishOnboarding = {
-                                navController.navigate("mode_select") {
+                                navController.navigate("setup_pin") {
                                     popUpTo("onboarding") { inclusive = true }
                                 }
                             })
@@ -92,7 +93,7 @@ class MainActivity : ComponentActivity() {
 
                         composable("setup_pin") {
                             SetupPinScreen(onPinSet = {
-                                navController.navigate("dashboard") {
+                                navController.navigate("mode_select") {
                                     popUpTo("setup_pin") { inclusive = true }
                                 }
                             })
@@ -105,7 +106,34 @@ class MainActivity : ComponentActivity() {
                                 onSettingsClick = { navController.navigate("settings") },
                                 onCustomDomains = { navController.navigate("custom_domains") },
                                 onDailyLimits   = { navController.navigate("daily_limits") },
-                                onNavigateBack  = { navController.popBackStack() }
+                                onNavigateBack  = {
+                                    if (!navController.popBackStack()) {
+                                        navController.navigate("mode_select") {
+                                            popUpTo("dashboard") { inclusive = true }
+                                        }
+                                    }
+                                },
+                                onManageProfiles = { navController.navigate("profiles") }
+                            )
+                        }
+
+                        composable("profiles") {
+                            ProfilesScreen(
+                                onNavigateBack = { navController.popBackStack() },
+                                onEditProfileApps = { profileId ->
+                                    navController.navigate("profile_apps/$profileId")
+                                }
+                            )
+                        }
+
+                        composable(
+                            "profile_apps/{profileId}",
+                            arguments = listOf(androidx.navigation.navArgument("profileId") { type = androidx.navigation.NavType.IntType })
+                        ) { backStackEntry ->
+                            val profileId = backStackEntry.arguments?.getInt("profileId") ?: return@composable
+                            ProfileAppSelectScreen(
+                                profileId = profileId,
+                                onNavigateBack = { navController.popBackStack() }
                             )
                         }
 
@@ -114,7 +142,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("settings") {
-                            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+                            SettingsScreen(
+                                onNavigateBack = { navController.popBackStack() },
+                                onChangeModeClick = { navController.navigate("mode_select") }
+                            )
                         }
 
                         composable("custom_domains") {

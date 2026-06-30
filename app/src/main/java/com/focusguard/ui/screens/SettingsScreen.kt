@@ -34,7 +34,7 @@ import com.focusguard.data.PinManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onNavigateBack: () -> Unit) {
+fun SettingsScreen(onNavigateBack: () -> Unit, onChangeModeClick: () -> Unit) {
     val context = LocalContext.current
     val pinManager = remember { PinManager(context) }
 
@@ -89,6 +89,14 @@ fun SettingsScreen(onNavigateBack: () -> Unit) {
                         icon = Icons.Default.Lock,
                         iconTint = MaterialTheme.colorScheme.primary,
                         onClick = { showChangePinDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.1f)))
+                    SettingRow(
+                        title = "Change App Mode",
+                        subtitle = "Switch between Parental Control and Self-Focus",
+                        icon = Icons.Default.Warning,
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                        onClick = onChangeModeClick
                     )
                 }
             }
