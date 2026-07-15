@@ -59,6 +59,9 @@ fun DashboardScreen(
     val db = remember { AppDatabase.getInstance(context) }
     val pinManager = remember { PinManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    
+    val prefs = context.getSharedPreferences("FocusGuardPrefs", Context.MODE_PRIVATE)
+    var isParental by remember { mutableStateOf(prefs.getString("app_mode", "self_focus") == "parental") }
 
     val allBlockedApps by db.blockedAppDao().getBlockedApps().collectAsState(initial = emptyList())
     val allActiveProfiles by db.blockProfileDao().getActiveProfiles().collectAsState(initial = emptyList())
@@ -95,18 +98,22 @@ fun DashboardScreen(
 
     LaunchedEffect(Unit) {
         while (true) {
+            isParental = prefs.getString("app_mode", "self_focus") == "parental"
             accessibilityEnabled = isAccessibilityEnabled(context)
             deviceAdminActive    = isDeviceAdminActive(context)
             usageStatsGranted    = hasUsageStatsPermission(context)
-            if (usageStatsGranted && accessibilityEnabled) {
-                AppBlockerService.start(context)
-            }
             val currentVpnIntent = android.net.VpnService.prepare(context)
             vpnIntent = currentVpnIntent
             if (currentVpnIntent == null) {
                 com.focusguard.services.FocusVpnService.start(context)
             }
             kotlinx.coroutines.delay(1000)
+        }
+    }
+
+    LaunchedEffect(totalRestrictions, usageStatsGranted, accessibilityEnabled) {
+        if (usageStatsGranted && accessibilityEnabled && totalRestrictions > 0) {
+            AppBlockerService.start(context)
         }
     }
 
@@ -204,7 +211,7 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = if (isBlockActive) "Protection Active" else "Ready to Focus",
+                                    text = if (isBlockActive) "Protection Active" else if (isParental) "Ready to Protect" else "Ready to Focus",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -357,7 +364,7 @@ fun DashboardScreen(
                             containerColor = androidx.compose.ui.graphics.Color(0xFFE91E63) // Vibrant Pink
                         )
                         ActionCard(
-                            title = "Quick Lists",
+                            title = if (isParental) "Restricted Lists" else "Quick Lists",
                             icon = Icons.Default.Apps,
                             onClick = onManageProfiles,
                             modifier = Modifier.weight(1f),
@@ -415,14 +422,15 @@ fun DashboardScreen(
                 
                 // Active Profiles
                 items(activeProfiles) { profile ->
-                    ActiveProfileRow(profile = profile)
+                    ActiveProfileRow(profile = profile, isParental = isParental)
                 }
                 
                 // Individually blocked apps
                 items(blockedApps) { app ->
                     BlockedAppRow(
                         app = app,
-                        onRequestUnblock = {
+                        isParental = isParental,
+                        onUnblockClick = {
                             // Show PIN gate — don't unblock directly
                             appPendingUnblock = app
                         }
@@ -531,7 +539,11 @@ fun UnblockPinDialog(
 
 // ─── Blocked app row ──────────────────────────────────────────────────────────
 @Composable
-fun BlockedAppRow(app: BlockedApp, onRequestUnblock: () -> Unit) {
+fun BlockedAppRow(
+    app: BlockedApp,
+    isParental: Boolean,
+    onUnblockClick: () -> Unit
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val appIcon = remember<androidx.compose.ui.graphics.ImageBitmap?>(app.packageName) {
         try {
@@ -555,14 +567,14 @@ fun BlockedAppRow(app: BlockedApp, onRequestUnblock: () -> Unit) {
     
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(app.blockedUntil) {
-        if (app.blockedUntil > 0L) {
+        if (!isParental && app.blockedUntil > 0L) {
             while (true) {
                 kotlinx.coroutines.delay(1000L)
                 now = System.currentTimeMillis()
             }
         }
     }
-    val timeLeft = if (app.blockedUntil > 0L) {
+    val timeLeft = if (!isParental && app.blockedUntil > 0L) {
         val ms = app.blockedUntil - now
         when {
             ms <= 0 -> null
@@ -617,7 +629,7 @@ fun BlockedAppRow(app: BlockedApp, onRequestUnblock: () -> Unit) {
 
 // ─── Active Profile row ───────────────────────────────────────────────────────
 @Composable
-fun ActiveProfileRow(profile: com.focusguard.data.BlockProfile) {
+fun ActiveProfileRow(profile: com.focusguard.data.BlockProfile, isParental: Boolean) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
     val apps by db.blockProfileDao().getAppsForProfile(profile.id).collectAsState(initial = emptyList())
@@ -625,14 +637,14 @@ fun ActiveProfileRow(profile: com.focusguard.data.BlockProfile) {
     
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(profile.activeUntil) {
-        if (profile.activeUntil > 0L) {
+        if (!isParental && profile.activeUntil > 0L) {
             while (true) {
                 kotlinx.coroutines.delay(1000L)
                 now = System.currentTimeMillis()
             }
         }
     }
-    val timeLeft = if (profile.activeUntil > 0L) {
+    val timeLeft = if (!isParental && profile.activeUntil > 0L) {
         val ms = profile.activeUntil - now
         when {
             ms <= 0 -> null

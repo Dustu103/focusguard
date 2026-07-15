@@ -1,0 +1,25 @@
+# Gradle build outputs - not needed in Docker
+.gradle
+build
+app/build
+
+# Local config files
+local.properties
+*.keystore
+*.jks
+
+# IDE files
+.idea
+*.iml
+.vscode
+
+# Web files (not part of Android build)
+web/node_modules
+web/dist
+
+# Git
+.git
+
+# OS files
+.DS_Store
+Thumbs.db

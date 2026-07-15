@@ -70,12 +70,14 @@ class AppBlockerService : Service() {
                 
                 baseBlockedPackages = baseBlocked
                 blockedPackages = baseBlockedPackages + profileBlockedPackages
+                checkAndStopIfIdle()
             }
         }
         serviceScope.launch {
             db.blockProfileDao().getPackagesForActiveProfiles().collect { packages ->
                 profileBlockedPackages = packages.toSet()
                 blockedPackages = baseBlockedPackages + profileBlockedPackages
+                checkAndStopIfIdle()
             }
         }
         serviceScope.launch {
@@ -87,7 +89,20 @@ class AppBlockerService : Service() {
         serviceScope.launch {
             db.usageLimitDao().getAllLimits().collect { limits ->
                 limitPackages = limits.associate { it.target to it.limitMinutes }
+                checkAndStopIfIdle()
             }
+        }
+    }
+
+    private fun checkAndStopIfIdle() {
+        if (blockedPackages.isEmpty() && limitPackages.isEmpty()) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+            stopSelf()
         }
     }
 
@@ -101,6 +116,11 @@ class AppBlockerService : Service() {
     }
 
     private fun checkForegroundApp() {
+        // Fast-path: Skip expensive UsageStats queries if there's nothing to block!
+        if (blockedPackages.isEmpty() && limitPackages.isEmpty()) {
+            return
+        }
+
         val now = System.currentTimeMillis()
         // Query the last 10 seconds of raw system window events
         val events = usageStatsManager.queryEvents(now - 10_000L, now)
@@ -164,9 +184,13 @@ class AppBlockerService : Service() {
             NotificationManager.IMPORTANCE_LOW
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val prefs = getSharedPreferences("FocusGuardPrefs", Context.MODE_PRIVATE)
+        val mode = prefs.getString("app_mode", "self_focus")
+        val contentText = if (mode == "parental") "Parental controls are running" else "Focus session is active"
+
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("FocusGuard is active")
-            .setContentText("Parental controls are running")
+            .setContentText(contentText)
             .setSmallIcon(android.R.drawable.sym_def_app_icon)
             .setOngoing(true)   // can't be swiped away
             .build()

@@ -1,0 +1,86 @@
+/* Shared component styles */
+
+/* ── Navbar ─────────────────────────────────────────────── */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 0 2rem;
+  height: 68px;
+  display: flex; align-items: center;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+.navbar.scrolled {
+  background: rgba(11,15,30,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom-color: rgba(255,255,255,0.07);
+}
+.nav-inner {
+  max-width: 1180px; width: 100%; margin: 0 auto;
+  display: flex; align-items: center; gap: 2rem;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 1.15rem; color: #fff;
+  text-decoration: none; flex-shrink: 0;
+}
+.nav-links {
+  display: flex; gap: 0.25rem; margin-left: auto;
+}
+.nav-links a {
+  color: #94A3B8; text-decoration: none; padding: 0.4rem 0.9rem;
+  border-radius: 8px; font-size: 0.9rem; font-weight: 500;
+  transition: all 0.2s;
+}
+.nav-links a:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.btn-nav {
+  background: linear-gradient(135deg, #00E5FF, #00B8CC);
+  color: #000 !important; font-weight: 700 !important;
+  border-radius: 10px; padding: 0.45rem 1.2rem !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-nav:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,229,255,0.4); background: rgba(0,229,255,0.1) !important; color: #00E5FF !important; }
+
+/* ── Shared buttons ─────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: linear-gradient(135deg, #00E5FF, #00B8CC);
+  color: #000; font-weight: 700; font-size: 1rem;
+  padding: 0.85rem 2rem; border-radius: 14px;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: all 0.25s;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,229,255,0.5); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: transparent;
+  color: #fff; font-weight: 600; font-size: 1rem;
+  padding: 0.85rem 2rem; border-radius: 14px;
+  text-decoration: none; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
+  transition: all 0.25s;
+}
+.btn-outline:hover { border-color: rgba(0,229,255,0.5); color: #00E5FF; background: rgba(0,229,255,0.05); }
+
+/* ── Section shared ─────────────────────────────────────── */
+section { padding: 7rem 2rem; position: relative; overflow: hidden; }
+.section-inner { max-width: 1180px; margin: 0 auto; }
+.section-label {
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase; color: #00E5FF; margin-bottom: 1rem;
+}
+.section-title {
+  font-size: clamp(2rem, 4vw, 3rem); font-weight: 800;
+  line-height: 1.15; margin-bottom: 1.2rem;
+}
+.gradient-text {
+  background: linear-gradient(135deg, #00E5FF, #A855F7);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glow blobs ─────────────────────────────────────────── */
+.glow {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  filter: blur(100px); opacity: 0.18;
+}
+.glow-teal  { background: #00E5FF; }
+.glow-purple { background: #A855F7; }

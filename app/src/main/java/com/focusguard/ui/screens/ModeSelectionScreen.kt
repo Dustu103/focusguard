@@ -105,7 +105,7 @@ fun ModeSelectionScreen(onFocusModeSelected: () -> Unit, onParentalModeSelected:
                     "Permanent app blocking",
                     "Device Admin protection"
                 ),
-                badgeText = null,
+                badgeText = "Coming Soon",
                 gradient = listOf(Color(0xFF0A1F1A), Color(0xFF071510)),
                 borderColor = Color(0xFF00C896).copy(alpha = 0.3f),
                 onClick = onParentalModeSelected

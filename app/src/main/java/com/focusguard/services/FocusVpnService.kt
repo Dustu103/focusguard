@@ -25,6 +25,8 @@ class FocusVpnService : VpnService() {
     private var isRunning = false
     private lateinit var db: AppDatabase
     private var blockedDomains = setOf<String>()
+    // Track which package names are currently blocked so we can bypass VPN for others
+    private var blockedPackageNames = setOf<String>()
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onCreate() {
@@ -55,22 +57,26 @@ class FocusVpnService : VpnService() {
                 db.blockedDomainDao().getBlockedDomains()
             ) { apps, customDomains ->
                 val domains = mutableSetOf<String>()
+                val packages = mutableSetOf<String>()
                 apps.filter { it.isBlocked }.forEach { app ->
-                    domains.addAll(BlockedDomains.getDomainsForPackage(app.packageName))
+                    val appDomains = BlockedDomains.getDomainsForPackage(app.packageName)
+                    domains.addAll(appDomains)
+                    // Only track packages that actually have domain mappings
+                    if (appDomains.isNotEmpty()) packages.add(app.packageName)
                 }
                 domains.addAll(customDomains.map { it.domain })
-                domains
-            }.collect { combinedDomains ->
+                Pair(domains, packages)
+            }.collect { (combinedDomains, packages) ->
+                val domainsChanged = combinedDomains != blockedDomains
+                val packagesChanged = packages != blockedPackageNames
                 blockedDomains = combinedDomains
+                blockedPackageNames = packages
+
                 if (combinedDomains.isEmpty() && isRunning) {
-                    isRunning = false
-                    try {
-                        vpnInterface?.close()
-                    } catch (e: Exception) {
-                        Log.e("VPN", "Error closing vpn interface", e)
-                    }
-                    vpnInterface = null
-                } else if (combinedDomains.isNotEmpty() && !isRunning) {
+                    stopVpn()
+                } else if (combinedDomains.isNotEmpty() && (!isRunning || packagesChanged || domainsChanged)) {
+                    // Restart VPN to rebuild the disallowed-app list
+                    if (isRunning) stopVpn()
                     startVpn()
                 }
             }
@@ -80,15 +86,42 @@ class FocusVpnService : VpnService() {
     private fun startVpn() {
         val builder = Builder()
             .setSession("FocusGuard")
+            // Fake DNS server address inside the VPN tunnel — only DNS (port 53) goes here
             .addAddress("10.0.0.2", 32)
             .addDnsServer("10.0.0.1")
+            // ONLY route the fake DNS server IP — nothing else goes into the tunnel.
+            // This means only DNS queries are intercepted; all other traffic
+            // (HTTPS, TCP, UDP) flows normally through the real network.
             .addRoute("10.0.0.1", 32)
             .setBlocking(false)
 
-        vpnInterface = builder.establish()
-        isRunning = true
+        // KEY FIX: Exclude ALL installed apps EXCEPT those we explicitly want to DNS-block.
+        // This prevents the tunnel from silently swallowing traffic for apps like LinkedIn,
+        // Telegram, banking apps, etc. that are not in the blocked list.
+        try {
+            val pm = packageManager
+            val allPackages = pm.getInstalledPackages(0).map { it.packageName }
+            for (pkg in allPackages) {
+                if (pkg !in blockedPackageNames && pkg != packageName) {
+                    try {
+                        builder.addDisallowedApplication(pkg)
+                    } catch (e: Exception) {
+                        // Some system packages can't be excluded — safe to ignore
+                        Log.d("VPN", "Could not exclude $pkg: ${e.message}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("VPN", "Failed to build disallowed app list", e)
+        }
 
-        Thread { handleDnsPackets() }.start()
+        vpnInterface = builder.establish()
+        if (vpnInterface != null) {
+            isRunning = true
+            Thread { handleDnsPackets() }.start()
+        } else {
+            Log.e("VPN", "Failed to establish VPN interface")
+        }
     }
 
     private fun handleDnsPackets() {

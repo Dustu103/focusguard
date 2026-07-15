@@ -68,13 +68,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("dashboard")
                                 },
                                 onParentalModeSelected = {
-                                    val prefs = getSharedPreferences("FocusGuardPrefs", Context.MODE_PRIVATE)
-                                    prefs.edit()
-                                        .putBoolean("has_selected_mode", true)
-                                        .putString("app_mode", "parental")
-                                        .apply()
-                                    
-                                    navController.navigate("dashboard")
+                                    navController.navigate("coming_soon")
                                 }
                             )
                         }

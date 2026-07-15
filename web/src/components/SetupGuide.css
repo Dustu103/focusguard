@@ -1,0 +1,49 @@
+.steps-list { display: flex; flex-direction: column; gap: 0.75rem; max-width: 780px; }
+
+.step-item {
+  background: rgba(28,32,53,0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; overflow: hidden;
+  transition: border-color 0.3s;
+  backdrop-filter: blur(8px);
+}
+.step-item.open { border-color: rgba(0,229,255,0.25); }
+
+.step-header {
+  width: 100%; display: flex; align-items: center; gap: 1rem;
+  padding: 1.2rem 1.5rem; background: none; border: none; cursor: pointer;
+  text-align: left;
+}
+.step-num {
+  font-size: 0.7rem; font-weight: 800; color: #00E5FF;
+  letter-spacing: 0.1em; width: 28px; flex-shrink: 0;
+}
+.step-title { font-size: 1rem; font-weight: 700; color: #E2E8F0; flex: 1; }
+
+.step-body { overflow: hidden; }
+.step-body-inner {
+  padding: 0 1.5rem 1.4rem 1.5rem;
+  display: flex; flex-direction: column; gap: 1rem;
+  color: #94A3B8; font-size: 0.9rem; line-height: 1.7;
+  padding-left: calc(1.5rem + 28px + 1rem);
+}
+
+.step-tip {
+  background: rgba(0,229,255,0.07); border: 1px solid rgba(0,229,255,0.15);
+  border-radius: 10px; padding: 0.85rem 1rem; font-size: 0.85rem;
+  color: #94A3B8;
+}
+.step-tip strong { color: #00E5FF; display: block; margin-bottom: 4px; }
+
+/* Perms */
+.perms-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.perm-item { display: flex; align-items: flex-start; gap: 0.75rem; }
+.perm-badge {
+  font-size: 0.65rem; font-weight: 800; padding: 2px 8px;
+  border-radius: 6px; background: rgba(239,68,68,0.15); color: #EF4444;
+  border: 1px solid rgba(239,68,68,0.3); white-space: nowrap; margin-top: 2px;
+}
+.perm-badge.opt {
+  background: rgba(245,158,11,0.12); color: #F59E0B; border-color: rgba(245,158,11,0.3);
+}
+.perm-path { font-size: 0.8rem; color: #475569; font-style: italic; }

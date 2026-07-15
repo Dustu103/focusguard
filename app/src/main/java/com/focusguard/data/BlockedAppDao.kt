@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BlockedAppDao {
-    @Query("SELECT * FROM blocked_apps WHERE isBlocked = 1")
+    // Returns ALL apps (not just blocked) so the Flow emits when isBlocked flips
+    // from 1→0 on timer expiry, allowing services to clear their domain cache.
+    @Query("SELECT * FROM blocked_apps")
     fun getBlockedApps(): Flow<List<BlockedApp>>
 
     @Query("SELECT * FROM blocked_apps")

@@ -1,0 +1,51 @@
+.footer {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 3rem 2rem;
+  background: rgba(11,15,30,0.8);
+}
+.footer-inner { max-width: 1180px; margin: 0 auto; }
+.footer-top {
+  display: flex; align-items: center; gap: 2rem; flex-wrap: wrap;
+}
+.footer-logo { text-decoration: none; }
+.footer-links {
+  display: flex; gap: 0.25rem; margin-left: auto;
+  flex-wrap: wrap;
+}
+.footer-links a {
+  color: #475569; text-decoration: none; padding: 0.3rem 0.75rem;
+  font-size: 0.85rem; border-radius: 8px; transition: color 0.2s;
+}
+.footer-links a:hover { color: #94A3B8; }
+.footer-dl {
+  font-size: 0.85rem !important;
+  padding: 0.5rem 1.2rem !important;
+  border-radius: 10px !important;
+}
+.footer-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 1.5rem 0; }
+.footer-bottom {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem;
+  color: #94A3B8; font-size: 0.9rem;
+}
+
+.footer-contact h4 {
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+.footer-contact p {
+  margin: 0.2rem 0;
+}
+.footer-contact a {
+  color: #00E5FF; text-decoration: none;
+}
+.footer-contact a:hover {
+  text-decoration: underline;
+}
+
+/* Nav logo shared between navbar & footer */
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 1.05rem; color: #fff;
+  text-decoration: none;
+}
