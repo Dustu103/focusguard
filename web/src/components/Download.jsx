@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { Download as DownloadIcon, Code, Package, Star } from 'lucide-react'
 import './shared.css'
 import './Download.css'
@@ -12,6 +13,27 @@ const stores = [
 ]
 
 export default function DownloadSection() {
+  const [downloads, setDownloads] = useState(1);
+
+  useEffect(() => {
+    fetch('https://api.counterapi.dev/v1/focusguard/downloads')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.count) setDownloads(data.count);
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleDownloadClick = () => {
+    // Increment count globally without blocking the download
+    fetch('https://api.counterapi.dev/v1/focusguard/downloads/up')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.count) setDownloads(data.count);
+      })
+      .catch(console.error);
+  };
+
   return (
     <section id="download">
       <div className="glow glow-teal" style={{ width:600,height:600, top:'-20%', left:'30%' }} />
@@ -23,9 +45,9 @@ export default function DownloadSection() {
         >
           <AppIcon size={72} rounded />
           <h2 className="dl-title">Download FocusGuard</h2>
-          <p className="dl-sub">Free forever. No account. No subscription. No ads.</p>
+          <p className="dl-sub">Join <strong style={{color:'#00E5FF'}}>{downloads.toLocaleString()}</strong> others taking back control of their time.</p>
 
-          <a href="focusguard.apk" download className="btn-primary btn-xl">
+          <a href="focusguard.apk" download className="btn-primary btn-xl" onClick={handleDownloadClick}>
             <DownloadIcon size={22} /> Download APK – Free
           </a>
 
