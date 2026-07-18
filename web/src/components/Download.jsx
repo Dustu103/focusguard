@@ -53,7 +53,7 @@ export default function DownloadSection() {
 
           <div className="dl-meta">
             <span>📱 Android 8.0+</span>
-            <span>📦 ~4 MB</span>
+            <span>📦 ~15 MB</span>
             <span>🔒 No data collected</span>
             <span>⚡ Battery efficient</span>
           </div>

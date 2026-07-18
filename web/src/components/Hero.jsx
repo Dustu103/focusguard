@@ -44,7 +44,7 @@ export default function Hero() {
           </motion.div>
 
           <motion.p className="hero-note" {...fadeUp(0.55)}>
-            Android 8.0+ &nbsp;·&nbsp; ~4 MB &nbsp;·&nbsp; No Play Store needed
+            Android 8.0+ &nbsp;·&nbsp; ~15 MB &nbsp;·&nbsp; No Play Store needed
           </motion.p>
 
           {/* Stats row */}
@@ -53,7 +53,7 @@ export default function Hero() {
               { value: '8+',      label: 'Features'         },
               { value: '0',       label: 'Data collected'   },
               { value: '100%',    label: 'Free forever'     },
-              { value: '<4 MB',   label: 'App size'         },
+              { value: '<15 MB',   label: 'App size'         },
             ].map(({ value, label }) => (
               <div key={label} className="stat-pill">
                 <span className="stat-val">{value}</span>
