@@ -16,7 +16,7 @@ export default function DownloadSection() {
   const [downloads, setDownloads] = useState(1);
 
   useEffect(() => {
-    fetch('https://api.counterapi.dev/v1/focusguard/downloads')
+    fetch('/api/counter')
       .then(res => res.json())
       .then(data => {
         if (data && data.count) setDownloads(data.count);
@@ -29,7 +29,7 @@ export default function DownloadSection() {
     setDownloads(prev => prev + 1);
 
     // Increment count globally without blocking the download
-    fetch('https://api.counterapi.dev/v1/focusguard/downloads/up')
+    fetch('/api/counter/up')
       .then(res => res.json())
       .then(data => {
         if (data && data.count) setDownloads(data.count);
