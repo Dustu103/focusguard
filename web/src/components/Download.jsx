@@ -25,6 +25,9 @@ export default function DownloadSection() {
   }, []);
 
   const handleDownloadClick = () => {
+    // Optimistically update the UI instantly
+    setDownloads(prev => prev + 1);
+
     // Increment count globally without blocking the download
     fetch('https://api.counterapi.dev/v1/focusguard/downloads/up')
       .then(res => res.json())
