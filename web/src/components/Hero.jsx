@@ -35,7 +35,7 @@ export default function Hero() {
           </motion.p>
 
           <motion.div className="hero-actions" {...fadeUp(0.45)}>
-            <a href="focusguard.apk" download className="btn-primary">
+            <a href="focusguard.apk" download className="btn-primary" onClick={() => fetch('https://api.counterapi.dev/v1/focusguard/downloads/up').catch(()=>{})}>
               <Download size={20} /> Download APK – Free
             </a>
             <a href="#setup" className="btn-outline">

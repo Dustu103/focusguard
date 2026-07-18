@@ -18,7 +18,7 @@ export default function Footer() {
             <a href="#download">Download</a>
             <a href="#privacy">Privacy Policy</a>
           </div>
-          <a href="focusguard.apk" download className="btn-primary footer-dl">
+          <a href="focusguard.apk" download className="btn-primary footer-dl" onClick={() => fetch('https://api.counterapi.dev/v1/focusguard/downloads/up').catch(()=>{})}>
             <Download size={16}/> Download APK
           </a>
         </div>

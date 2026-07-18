@@ -26,7 +26,7 @@ export default function Navbar() {
           <a href="#privacy">Privacy</a>
           <a href="#help">Help</a>
         </div>
-        <a href="focusguard.apk" download className="btn-nav nav-links a" style={{
+        <a href="focusguard.apk" download className="btn-nav nav-links a" onClick={() => fetch('https://api.counterapi.dev/v1/focusguard/downloads/up').catch(()=>{})} style={{
           background:'linear-gradient(135deg,#00E5FF,#00B8CC)',
           color:'#000', fontWeight:700, borderRadius:10,
           padding:'0.45rem 1.2rem', textDecoration:'none',
