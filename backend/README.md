@@ -49,3 +49,25 @@ backend/
 4. Set Start Command: `npm start`
 5. Add a **PostgreSQL** database on Render (free tier)
 6. Copy the `DATABASE_URL` from Render into your environment variables
+
+## 🐳 Run with Docker (Local Development)
+
+```bash
+cd backend
+
+# Start API + PostgreSQL together
+docker-compose up --build
+
+# API will be live at http://localhost:3000
+# Health check: http://localhost:3000/health
+```
+
+To stop:
+```bash
+docker-compose down
+```
+
+To wipe the database volume too:
+```bash
+docker-compose down -v
+```
