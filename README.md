@@ -1,32 +1,75 @@
 # FocusGuard
 
-A premium, highly secure Android application designed for powerful self-control and distraction blocking.
+<div align="center">
+  <img src="https://img.shields.io/badge/Platform-Android_8.0+-3DDC84.svg?style=flat-square&logo=android" alt="Platform" />
+  <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF.svg?style=flat-square&logo=kotlin" alt="Kotlin" />
+  <img src="https://img.shields.io/badge/UI-Jetpack_Compose-4285F4.svg?style=flat-square&logo=android" alt="Jetpack Compose" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
+</div>
 
-## ✅ Completed Features & Implementations
+<br/>
 
-### 1. Core Blocking Infrastructure
-* **Accessibility Service Engine:** A robust background service that actively monitors foreground apps and instantly draws a system-level overlay (block screen) over prohibited applications.
-* **Real-time Expiration Service:** A high-frequency polling coroutine within the background service that automatically forces restriction timers to expire exactly when they reach zero, seamlessly lifting blocks.
-* **Usage Stats Integration:** Accurately tracks foreground activity to ensure immediate detection of newly launched apps.
+**FocusGuard** is a free, 100% offline, privacy-first Android application designed to help users manage screen time, block distractions, and reclaim their focus.
 
-### 2. High-Fidelity UI/UX & Dashboard
-* **Dynamic Live Dashboard:** A stunning, premium dark-mode interface featuring real-time ticking countdown timers for active restrictions.
-* **Mini-App Previews:** High-quality, dynamically loaded icon grids that visually display which apps are contained within a Quick List directly on the Dashboard.
-* **Seamless Onboarding Flow:** A highly polished multi-step onboarding journey that clearly explains and requests necessary system permissions (Accessibility, Usage Access, Device Admin) sequentially.
-* **Glassmorphism & Gradients:** Utilized advanced Compose animations, gradients, and spring physics to create a tactile and responsive user experience.
+Unlike traditional screen-time applications that require expensive subscriptions, force cloud accounts, or sell user data, FocusGuard runs completely locally on your device.
 
-### 3. Advanced Security & Tamper Prevention
-* **Device Administrator Lock:** Leveraged Android's Device Admin API to prevent the application from being uninstalled or force-stopped by the user while a focus session is active.
-* **PIN Protection System:** A secure, persistent PIN gate required for sensitive actions such as disabling Device Admin, changing app modes, or attempting to unblock an app early.
-* **Settings Loop Prevention:** Built logic to safely allow intentional disabling of Device Admin via the in-app Settings (with a PIN) without triggering aggressive re-enable loops.
+## 🚀 Features
 
-### 4. Self-Focus & Quick Lists
-* **Individual App Blocking:** Select specific apps to block for a custom duration (hours and minutes).
-* **Quick Lists (App Groups):** Group multiple distracting apps into a named list (e.g., "Social Media") and block the entire cohort with a single tap.
-* **Commitment Lock:** Designed around the philosophy of self-focus; once a timer is set, the user cannot easily quit or bypass the block until the time expires.
-* **Smart App Dependencies:** Added custom logic to handle underlying dependencies (e.g., blocking the Google Search app engine automatically if the Gemini app is selected).
+- **App & Domain Blocking:** Hard-blocks distracting apps and websites instantly.
+- **Daily App Limits:** Enforces strict, customizable daily usage quotas (e.g., max 1 hour of TikTok per day).
+- **Collective Lists (Profiles):** Group multiple distracting apps (e.g., "Social Media") and apply a shared timer or block them with a single tap.
+- **Zero Battery Drain Architecture:** Utilizes an innovative O(1) in-memory tracker alongside Android's `UsageStatsManager` to track foreground time with practically zero battery impact.
+- **VPN Sinkholing:** Uses a local, on-device `VpnService` to sinkhole DNS requests for distracting domains, preventing apps from loading new content.
+- **Strict Mode & PIN Protection:** Includes a secure Parental/Commitment Mode with Device Administrator uninstall protection to prevent circumvention.
+- **100% Offline:** Zero data collection. No trackers. All data stays in your local Room Database.
 
-### 5. Future Foundations Laid
-* **Parental Control Mode:** Laid the architectural groundwork and Mode Selection UI for a distinct "Parental Control" paradigm featuring permanent blocks (currently gated as "Coming Soon").
-* **Local VPN Service:** Initiated the core structure for `FocusVpnService` to intercept and block specific website domains in the future.
-* **Daily Limits & Schedules:** Reserved UI space and structural planning for time-of-day scheduling and daily app usage limits.
+## 🏗 Technical Architecture
+
+Building Digital Wellbeing apps natively on Android involves navigating undocumented APIs and aggressive OEM battery optimizations. 
+
+FocusGuard implements several advanced architectural patterns:
+1. **AccessibilityService Engine:** A robust background service that monitors window state changes for real-time foreground app tracking.
+2. **In-Memory Usage Tracking:** To bypass the battery-draining necessity of polling `UsageStatsManager` twice a second, FocusGuard fetches a daily baseline exactly once upon app launch, and then increments an in-memory cache every 500ms using a lightweight foreground service.
+3. **Local VpnService:** Dynamically routes traffic and blocks internet access for targeted applications using `addDisallowedApplication`.
+
+## 🛠 Building from Source
+
+### Prerequisites
+- Android Studio (Jellyfish or newer)
+- JDK 17+
+- Android SDK (minSdkVersion 26, targetSdkVersion 34)
+
+### Setup Instructions
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Dustu103/focusguard.git
+   ```
+2. Open the project in Android Studio.
+3. Sync Gradle files.
+4. Build and run on an emulator or physical device.
+
+## 🌍 Web Infrastructure
+
+The project includes a responsive, animated landing page built with **React, Vite, and Framer Motion**, located in the `web/` directory.
+
+- Features a serverless proxy (`vercel.json`) to bypass browser adblockers (like Brave/uBlock) for anonymous global download tracking.
+- Run locally:
+  ```bash
+  cd web
+  npm install
+  npm run dev
+  ```
+
+## 🤝 Contributing
+
+Contributions are always welcome! If you are interested in reverse-engineering Android OS restrictions, improving the VPN tunneling logic, or bypassing aggressive OEM battery managers (Xiaomi/Samsung), we would love your help.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 🛡 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
