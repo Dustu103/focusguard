@@ -1,12 +1,15 @@
 package com.focusguard.services
 
+import android.R
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.app.NotificationCompat
@@ -16,12 +19,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
 
 class AppBlockerService : Service() {
 
     private lateinit var usageStatsManager: UsageStatsManager
     private lateinit var db: AppDatabase
+    private lateinit var limitTracker: DailyLimitTracker
     @Volatile private var blockedPackages = setOf<String>()
     @Volatile private var baseBlockedPackages = setOf<String>()
     @Volatile private var profileBlockedPackages = setOf<String>()
@@ -33,8 +40,9 @@ class AppBlockerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        usageStatsManager = getSystemService(USAGE_STATS_SERVICE) as UsageStatsManager
         db = AppDatabase.getInstance(this)
+        limitTracker = DailyLimitTracker()
         startForeground(NOTIFICATION_ID, buildNotification())
         observeBlockedApps()
         startMonitoring()
@@ -54,7 +62,7 @@ class AppBlockerService : Service() {
                 val now = System.currentTimeMillis()
                 db.blockedAppDao().autoExpireApps(now)
                 db.blockProfileDao().autoExpireProfiles(now)
-                kotlinx.coroutines.delay(2000L) // Poll every 2 seconds for expirations
+                delay(2000L) // Poll every 2 seconds for expirations
             }
         }
 
@@ -96,7 +104,7 @@ class AppBlockerService : Service() {
 
     private fun checkAndStopIfIdle() {
         if (blockedPackages.isEmpty() && limitPackages.isEmpty()) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
             } else {
                 @Suppress("DEPRECATION")
@@ -114,7 +122,8 @@ class AppBlockerService : Service() {
             }
         })
     }
-
+    private var foregroundApp: String? = null
+    private var lastForegroundApp: String? = null
     private fun checkForegroundApp() {
         // Fast-path: Skip expensive UsageStats queries if there's nothing to block!
         if (blockedPackages.isEmpty() && limitPackages.isEmpty()) {
@@ -124,49 +133,71 @@ class AppBlockerService : Service() {
         val now = System.currentTimeMillis()
         // Query the last 10 seconds of raw system window events
         val events = usageStatsManager.queryEvents(now - 10_000L, now)
-        var foregroundApp: String? = null
-        val event = android.app.usage.UsageEvents.Event()
+
+        val event = UsageEvents.Event()
         
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 foregroundApp = event.packageName
-            } else if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED || 
-                       event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_STOPPED) {
+            } else if (event.eventType == UsageEvents.Event.ACTIVITY_PAUSED ||
+                       event.eventType == UsageEvents.Event.ACTIVITY_STOPPED) {
                 if (foregroundApp == event.packageName) {
                     foregroundApp = null
                 }
             }
         }
-        
-        if (foregroundApp != null && foregroundApp != packageName) {
+
+        val isNewSession = foregroundApp != lastForegroundApp
+
+        val currentApp = foregroundApp
+        if (currentApp != null && currentApp != packageName) {
             var shouldBlock = false
-            if (foregroundApp in blockedPackages) {
+            var isDailyLimitBlock = false
+            if (currentApp in blockedPackages) {
                 shouldBlock = true
-            } else if (foregroundApp in limitPackages) {
-                val limitMs = limitPackages[foregroundApp]!! * 60_000L
-                val cal = java.util.Calendar.getInstance().apply {
-                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-                    set(java.util.Calendar.MINUTE, 0)
-                    set(java.util.Calendar.SECOND, 0)
-                    set(java.util.Calendar.MILLISECOND, 0)
-                }
-                val stats = usageStatsManager.queryAndAggregateUsageStats(cal.timeInMillis, now)
-                val usedMs = stats[foregroundApp]?.totalTimeInForeground ?: 0L
-                if (usedMs >= limitMs) {
+            } else if (currentApp in limitPackages) {
+                val limitMs = limitPackages[currentApp]!!.times(60_000L)
+                val usageTime = limitTracker.checkLimit(
+                    packageName = currentApp,
+                    isNewSession = isNewSession,
+                    pollIntervalMs = checkInterval,
+                    todayDayOfYear = getTodaysDay(),
+                    fetchBaselineMs = {
+                        val startOfToday = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                        val stats = usageStatsManager.queryAndAggregateUsageStats(startOfToday, now)
+                        stats[currentApp]?.totalTimeInForeground ?: 0L
+                    }
+                )
+                if (usageTime >= limitMs) {
                     shouldBlock = true
+                    isDailyLimitBlock = true
                 }
             }
 
             if (shouldBlock) {
-                showBlockScreen(foregroundApp)
+                showBlockScreen(currentApp, isDailyLimitBlock)
             }
         }
+        lastForegroundApp = foregroundApp
+    }
+    private fun getTodaysDay(): Int{
+        val cal = Calendar.getInstance()
+        cal.time = Date()
+        return cal.get(Calendar.DAY_OF_YEAR)
     }
 
-    private fun showBlockScreen(packageName: String) {
+    private fun showBlockScreen(packageName: String, isDailyLimitBlock: Boolean = false) {
         val intent = Intent(this, ChildBlockActivity::class.java).apply {
             putExtra("blocked_package", packageName)
+            if (isDailyLimitBlock) {
+                putExtra("block_reason", "DAILY_LIMIT")
+            }
             addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -184,14 +215,14 @@ class AppBlockerService : Service() {
             NotificationManager.IMPORTANCE_LOW
         )
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        val prefs = getSharedPreferences("FocusGuardPrefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("FocusGuardPrefs", MODE_PRIVATE)
         val mode = prefs.getString("app_mode", "self_focus")
         val contentText = if (mode == "parental") "Parental controls are running" else "Focus session is active"
 
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("FocusGuard is active")
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.sym_def_app_icon)
+            .setSmallIcon(R.drawable.sym_def_app_icon)
             .setOngoing(true)   // can't be swiped away
             .build()
     }
