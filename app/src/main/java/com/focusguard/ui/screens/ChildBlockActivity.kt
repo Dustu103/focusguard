@@ -74,9 +74,8 @@ class ChildBlockActivity : ComponentActivity() {
         startActivity(homeIntent)
     }
 
-    @Deprecated("Deprecated in Java")
+@Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        super.onBackPressed()
         goHome()
     }
 }
