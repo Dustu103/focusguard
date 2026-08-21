@@ -31,7 +31,8 @@ class ChildBlockActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val blockedPackage = intent.getStringExtra("blocked_package") ?: "This app"
         val isDeviceAdminDisable = intent.getBooleanExtra("is_device_admin_disable", false)
-        
+        val isDailyLimit = intent.getStringExtra("block_reason") == "DAILY_LIMIT"
+
         val appName = try {
             val pm = packageManager
             val ai = pm.getApplicationInfo(blockedPackage, 0)
@@ -58,7 +59,7 @@ class ChildBlockActivity : ComponentActivity() {
                         )
                     } else {
                         // --- App blocked overlay ---
-                        BlockedAppOverlay(appName = appName)
+                        BlockedAppOverlay(appName = appName, isDailyLimit = isDailyLimit)
                     }
                 }
             }
@@ -73,7 +74,7 @@ class ChildBlockActivity : ComponentActivity() {
         startActivity(homeIntent)
     }
 
-    @Deprecated("Deprecated in Java")
+@Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         goHome()
     }
@@ -173,7 +174,7 @@ private fun UninstallPinGate(onCorrectPin: () -> Unit, onWrongPin: () -> Unit) {
 }
 
 @Composable
-private fun BlockedAppOverlay(appName: String) {
+private fun BlockedAppOverlay(appName: String, isDailyLimit: Boolean = false) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -192,14 +193,17 @@ private fun BlockedAppOverlay(appName: String) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("🔒", fontSize = 56.sp)
+                Text(if (isDailyLimit) "⏰" else "🔒", fontSize = 56.sp)
                 Text(
-                    "App Blocked",
+                    if (isDailyLimit) "Time's Up" else "App Blocked",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "$appName has been blocked by FocusGuard Parental Controls.",
+                    if (isDailyLimit)
+                        "You've reached today's time limit for $appName."
+                    else
+                        "$appName has been blocked by FocusGuard Parental Controls.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
