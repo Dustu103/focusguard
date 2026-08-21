@@ -5,7 +5,7 @@ class DailyLimitTracker {
     private val usageMs = mutableMapOf<String, Long>()
     private val baselineDayOfYear = mutableMapOf<String, Int>()
 
-    fun checkLimit(
+    fun getUsage(
         packageName: String,
         isNewSession: Boolean,
         pollIntervalMs: Long,

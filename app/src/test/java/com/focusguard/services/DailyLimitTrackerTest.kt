@@ -10,7 +10,7 @@ class DailyLimitTrackerTest {
     fun `new session fetches baseline from UsageStatsManager`() {
         val tracker = DailyLimitTracker()
 
-        val used = tracker.checkLimit(
+        val used = tracker.getUsage(
             packageName = "com.example.game",
             isNewSession = true,
             pollIntervalMs = 500L,
@@ -27,8 +27,8 @@ class DailyLimitTrackerTest {
         var baselineCalls = 0
         val fetchBaseline = { baselineCalls++; 0L }
 
-        tracker.checkLimit("com.example.game", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = fetchBaseline)
-        val used = tracker.checkLimit("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = fetchBaseline)
+        tracker.getUsage("com.example.game", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = fetchBaseline)
+        val used = tracker.getUsage("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = fetchBaseline)
 
         // baseline (0) from the first tick, then +500ms from the second tick
         assertEquals(500L, used)
@@ -40,7 +40,7 @@ class DailyLimitTrackerTest {
         val tracker = DailyLimitTracker()
         val limitMs = 60 * 60_000L // 60-minute limit
 
-        var used = tracker.checkLimit(
+        var used = tracker.getUsage(
             "com.example.game",
             isNewSession = true,
             pollIntervalMs = 500L,
@@ -49,7 +49,7 @@ class DailyLimitTrackerTest {
         )
         assertTrue(used < limitMs)
 
-        used = tracker.checkLimit("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 0L })
+        used = tracker.getUsage("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 0L })
         assertEquals(60 * 60_000L, used)
         assertTrue(used >= limitMs)
     }
@@ -59,9 +59,9 @@ class DailyLimitTrackerTest {
         val tracker = DailyLimitTracker()
         var baselineCalls = 0
 
-        tracker.checkLimit("com.example.game", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 100, fetchBaselineMs = { baselineCalls++; 59 * 60_000L })
+        tracker.getUsage("com.example.game", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 100, fetchBaselineMs = { baselineCalls++; 59 * 60_000L })
         // Same continuous session, but the day rolled over (app stayed foregrounded across midnight)
-        val used = tracker.checkLimit("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 101, fetchBaselineMs = { baselineCalls++; 0L })
+        val used = tracker.getUsage("com.example.game", isNewSession = false, pollIntervalMs = 500L, todayDayOfYear = 101, fetchBaselineMs = { baselineCalls++; 0L })
 
         assertEquals(2, baselineCalls)
         assertEquals(0L, used) // yesterday's usage must not carry into today's limit
@@ -71,8 +71,8 @@ class DailyLimitTrackerTest {
     fun `different packages are tracked independently`() {
         val tracker = DailyLimitTracker()
 
-        tracker.checkLimit("pkg.a", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 10_000L })
-        val usedB = tracker.checkLimit("pkg.b", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 20_000L })
+        tracker.getUsage("pkg.a", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 10_000L })
+        val usedB = tracker.getUsage("pkg.b", isNewSession = true, pollIntervalMs = 500L, todayDayOfYear = 1, fetchBaselineMs = { 20_000L })
 
         assertEquals(20_000L, usedB)
     }

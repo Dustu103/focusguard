@@ -122,13 +122,13 @@ class AppBlockerService : Service() {
             }
         })
     }
-    private var foregroundApp: String? = null
     private var lastForegroundApp: String? = null
     private fun checkForegroundApp() {
         // Fast-path: Skip expensive UsageStats queries if there's nothing to block!
         if (blockedPackages.isEmpty() && limitPackages.isEmpty()) {
             return
         }
+        var foregroundApp: String? = null
 
         val now = System.currentTimeMillis()
         // Query the last 10 seconds of raw system window events
@@ -158,7 +158,7 @@ class AppBlockerService : Service() {
                 shouldBlock = true
             } else if (currentApp in limitPackages) {
                 val limitMs = limitPackages[currentApp]!!.times(60_000L)
-                val usageTime = limitTracker.checkLimit(
+                val usageTime = limitTracker.getUsage(
                     packageName = currentApp,
                     isNewSession = isNewSession,
                     pollIntervalMs = checkInterval,
